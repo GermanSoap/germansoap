@@ -143,7 +143,11 @@
         let startMarker = null; let endMarker = null;
 
         window.onload = function() {
-            map = new naver.maps.Map('map', { center: new naver.maps.LatLng(37.619462, 127.059828), zoom: 17, disableDoubleClickZoom: true });
+            map = new naver.maps.Map('map', { center: new naver.maps.LatLng(37.619462, 127.059828), 
+        zoom: 17, 
+        draggable: true, // 초기엔 이동 가능
+        pinchZoom: true,
+        scrollWheel: true});
             naver.maps.Event.addListener(map, 'mousedown', handleMouseDown);
             naver.maps.Event.addListener(map, 'mousemove', handleMouseMove);
             naver.maps.Event.addListener(map, 'mouseup', handleMouseUp);
@@ -221,7 +225,22 @@
         // --- [터치스크린 지원을 위한 이벤트 연결 로직] ---
 
 // 마우스와 터치 이벤트를 통합 처리하는 함수
-function handleInputStart(e) {
+function handleInputStart(e) 
+{
+    // ⭐️ 터치 이벤트가 지도 드래그와 겹치지 않게 방지
+    if (e.originalEvent) {
+        e.originalEvent.preventDefault(); 
+    }
+
+    // [✍️ 경로 그리기 모드]일 때만 지도 드래그 강제 중지
+    if (currentMode === 'user') {
+        map.setOptions({ draggable: false });
+    }
+
+    let coord = e.coord || e.latLng;
+    // ... 이후 기존 로직 동일 ...
+}
+{
     const coord = e.coord || e.latLng; // 마우스인지 터치인지 구분
     if (currentMode === 'admin') {
         if (adminSubMode === 'start') { startCoord = coord; createStartMarker(coord); document.getElementById('adminModeBtn').click(); } 
@@ -245,7 +264,13 @@ function handleInputMove(e) {
     }
 }
 
-function handleInputEnd(e) {
+function handleInputEnd(e) 
+{
+    isDrawing = false;
+    map.setOptions({ draggable: true }); // ⭐️ 그리기가 끝나면 다시 지도 이동 가능하게
+    // ... 이후 기존 로직 동일 ...
+}
+{
     if (currentMode === 'user' && isDrawing) { 
         isDrawing = false; 
         const snappedPath = processSnapCorrection(currentRawPath); 

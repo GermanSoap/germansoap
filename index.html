@@ -218,6 +218,53 @@
         function handleMouseMove(e) { if (currentMode === 'user' && isDrawing) { currentRawPath.push(e.coord); drawAllPaths(); } }
         function handleMouseUp(e) { if (currentMode === 'user' && isDrawing) { isDrawing = false; const snappedPath = processSnapCorrection(currentRawPath); if (snappedPath.length > 0) userPaths.push(snappedPath); currentRawPath = []; drawAllPaths(); } }
 
+        // --- [터치스크린 지원을 위한 이벤트 연결 로직] ---
+
+// 마우스와 터치 이벤트를 통합 처리하는 함수
+function handleInputStart(e) {
+    const coord = e.coord || e.latLng; // 마우스인지 터치인지 구분
+    if (currentMode === 'admin') {
+        if (adminSubMode === 'start') { startCoord = coord; createStartMarker(coord); document.getElementById('adminModeBtn').click(); } 
+        else if (adminSubMode === 'end') { endCoord = coord; createEndMarker(coord); document.getElementById('adminModeBtn').click(); } 
+        else { 
+            currentAdminPath.push(coord); 
+            if (currentAdminPath.length > 1) createMagneticPoints(currentAdminPath[currentAdminPath.length - 2], currentAdminPath[currentAdminPath.length - 1]); 
+            drawAllPaths(); 
+        }
+    } else if (currentMode === 'user') { 
+        isDrawing = true; 
+        currentRawPath = [coord]; 
+    }
+}
+
+function handleInputMove(e) {
+    const coord = e.coord || e.latLng;
+    if (currentMode === 'user' && isDrawing) { 
+        currentRawPath.push(coord); 
+        drawAllPaths(); 
+    }
+}
+
+function handleInputEnd(e) {
+    if (currentMode === 'user' && isDrawing) { 
+        isDrawing = false; 
+        const snappedPath = processSnapCorrection(currentRawPath); 
+        if (snappedPath.length > 0) userPaths.push(snappedPath); 
+        currentRawPath = []; 
+        drawAllPaths(); 
+    }
+}
+
+// ⭐️ 중요: 네이버 지도 API의 touch 이벤트 연결
+naver.maps.Event.addListener(map, 'mousedown', handleInputStart);
+naver.maps.Event.addListener(map, 'mousemove', handleInputMove);
+naver.maps.Event.addListener(map, 'mouseup', handleInputEnd);
+
+// 터치 이벤트는 네이버 지도 객체에 직접 등록해야 합니다
+naver.maps.Event.addListener(map, 'touchstart', handleInputStart);
+naver.maps.Event.addListener(map, 'touchmove', handleInputMove);
+naver.maps.Event.addListener(map, 'touchend', handleInputEnd);
+
         function createMagneticPoints(p1, p2) { const steps = 15; for(let i = 0; i <= steps; i++) magneticPoints.push(new naver.maps.LatLng(p1.lat() + (p2.lat() - p1.lat()) * (i / steps), p1.lng() + (p2.lng() - p1.lng()) * (i / steps))); }
         function processSnapCorrection(rawPath) {
             let result = []; let snapTolerance = 0.0003; 
